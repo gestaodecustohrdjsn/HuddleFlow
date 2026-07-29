@@ -524,12 +524,12 @@ Huddle.Pendencias = {
 
               <div id="acao_campo_prazo_dias" class="form-linha hidden">
                 <label for="acao_prazo_dias">Quantidade de dias</label>
-                <input id="acao_prazo_dias" type="number" min="1" step="1" placeholder="Ex.: 3">
+                <input id="acao_prazo_dias" type="number" min="1" max="1825" step="1" placeholder="Ex.: 3">
               </div>
 
               <div id="acao_campo_prazo_data" class="form-linha hidden">
                 <label for="acao_prazo_data">Data final</label>
-                <input id="acao_prazo_data" type="date">
+                <input id="acao_prazo_data" type="date" min="${Huddle.Utils.dataInputHoje()}" max="${Huddle.Utils.dataInputMaxPrazo()}">
               </div>
 
               <div class="form-linha">
@@ -602,19 +602,21 @@ Huddle.Pendencias = {
         return null;
       }
 
+      if (dias > 1825) {
+        Huddle.Utils.toast("O prazo por dias não pode ultrapassar 5 anos.");
+        return null;
+      }
+
       const prazo = new Date(agora.getTime() + dias * 24 * 60 * 60 * 1000);
       return { tipo, valor: String(dias), data: prazo.toISOString(), texto: `${dias} dia(s)` };
     }
 
     if (tipo === "DATA") {
       const dataInformada = Huddle.Utils.$("acao_prazo_data")?.value;
+      const prazo = Huddle.Utils.validarDataPrazo(dataInformada, "data final da prorrogação");
 
-      if (!dataInformada) {
-        Huddle.Utils.toast("Informe a data final da prorrogação.");
-        return null;
-      }
+      if (!prazo) return null;
 
-      const prazo = new Date(`${dataInformada}T23:59:59`);
       return { tipo, valor: dataInformada, data: prazo.toISOString(), texto: `até ${prazo.toLocaleDateString("pt-BR")}` };
     }
 

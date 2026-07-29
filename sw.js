@@ -1,4 +1,4 @@
-const CACHE_NAME = "huddleflow-pwa-v3-metas";
+const CACHE_NAME = "huddleflow-pwa-v4-icones-prazo";
 
 const APP_ASSETS = [
   "./",
@@ -15,6 +15,13 @@ const APP_ASSETS = [
   "./js/reunioes.js",
   "./js/main.js",
   "./images/Logo_HuddleFlow.svg",
+  "./images/icon_relatorios2.png",
+  "./images/icon_relatorios.png",
+  "./images/icon_configuracao2.png",
+  "./images/icon_configuracao.png",
+  "./images/icon_home.png",
+  "./images/logo_huddleflow.png",
+  "./images/logo_solta.png",
   "./images/icon-192.png",
   "./images/icon-512.png",
   "./images/icon-maskable-192.png",

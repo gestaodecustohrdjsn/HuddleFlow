@@ -1095,6 +1095,17 @@ button:disabled {
   border: 1px solid var(--cinza-borda);
   font-size: 1.25rem;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.btn-icone-config img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  display: block;
 }
 
 .btn-icone-config:hover {
@@ -1888,8 +1899,9 @@ button:disabled {
    DASHBOARD / INDICADORES
 ========================= */
 
-.btn-icone-dashboard {
-  font-size: 1.15rem;
+.btn-icone-dashboard img {
+  width: 25px;
+  height: 25px;
 }
 
 .tela-dashboard {

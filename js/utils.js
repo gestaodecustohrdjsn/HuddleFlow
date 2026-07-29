@@ -45,6 +45,62 @@ Huddle.Utils = {
     }).format(data);
   },
 
+  dataInputLocal(data = new Date()) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}`;
+  },
+
+  dataInputHoje() {
+    return this.dataInputLocal(new Date());
+  },
+
+  dataInputMaxPrazo(anos = 5) {
+    const data = new Date();
+    data.setFullYear(data.getFullYear() + anos);
+
+    return this.dataInputLocal(data);
+  },
+
+  validarDataPrazo(dataInformada, nomeCampo = "data final") {
+    if (!dataInformada) {
+      this.toast(`Informe a ${nomeCampo}.`);
+      return null;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dataInformada)) {
+      this.toast(`Informe uma ${nomeCampo} válida.`);
+      return null;
+    }
+
+    const dataInicio = new Date(`${dataInformada}T00:00:00`);
+    const dataFim = new Date(`${dataInformada}T23:59:59`);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const maximo = new Date(hoje);
+    maximo.setFullYear(maximo.getFullYear() + 5);
+
+    if (Number.isNaN(dataInicio.getTime())) {
+      this.toast(`Informe uma ${nomeCampo} válida.`);
+      return null;
+    }
+
+    if (dataInicio < hoje) {
+      this.toast("A data final não pode ser anterior à data de hoje.");
+      return null;
+    }
+
+    if (dataInicio > maximo) {
+      this.toast("A data final não pode ultrapassar 5 anos a partir de hoje.");
+      return null;
+    }
+
+    return dataFim;
+  },
+
   escapeHtml(valor) {
     return String(valor ?? "")
       .replaceAll("&", "&amp;")

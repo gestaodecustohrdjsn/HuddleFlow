@@ -272,12 +272,12 @@ Huddle.Perguntas = {
 
             <div id="campo_prazo_dias" class="form-linha hidden">
               <label for="pendencia_prazo_dias">Quantidade de dias</label>
-              <input id="pendencia_prazo_dias" type="number" min="1" step="1" placeholder="Ex.: 3">
+              <input id="pendencia_prazo_dias" type="number" min="1" max="1825" step="1" placeholder="Ex.: 3">
             </div>
 
             <div id="campo_prazo_data" class="form-linha hidden">
               <label for="pendencia_prazo_data">Data final</label>
-              <input id="pendencia_prazo_data" type="date">
+              <input id="pendencia_prazo_data" type="date" min="${Huddle.Utils.dataInputHoje()}" max="${Huddle.Utils.dataInputMaxPrazo()}">
             </div>
 
             <div class="acoes acoes-modal">
@@ -670,6 +670,11 @@ Huddle.Perguntas = {
         return null;
       }
 
+      if (dias > 1825) {
+        Huddle.Utils.toast("O prazo por dias não pode ultrapassar 5 anos.");
+        return null;
+      }
+
       const prazo = new Date(agora.getTime() + dias * 24 * 60 * 60 * 1000);
 
       return {
@@ -682,13 +687,9 @@ Huddle.Perguntas = {
 
     if (tipo === "DATA") {
       const dataInformada = Huddle.Utils.$("pendencia_prazo_data")?.value;
+      const prazo = Huddle.Utils.validarDataPrazo(dataInformada, "data final da pendência");
 
-      if (!dataInformada) {
-        Huddle.Utils.toast("Informe a data final da pendência.");
-        return null;
-      }
-
-      const prazo = new Date(`${dataInformada}T23:59:59`);
+      if (!prazo) return null;
 
       return {
         tipo,
