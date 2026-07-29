@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sistema local para reuniões, perguntas, pendências e indicadores hospitalares.">
+  <meta name="theme-color" content="#0b4776">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="HuddleFlow">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <title>HuddleFlow</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <main class="container">
+    <header class="header">
+      <div class="header-conteudo">
+        <div class="header-titulo">
+          <h1>HuddleFlow</h1>
+          <p>Reuniões, pendências e conformidade</p>
+        </div>
+
+        <div class="header-direita">
+          <button
+            class="btn-icone-config btn-icone-dashboard"
+            title="Dashboard"
+            aria-label="Dashboard"
+            onclick="Huddle.Dashboard.render()"
+          >
+            📊
+          </button>
+
+          <button
+            class="btn-icone-config btn-icone-home"
+            title="Início"
+            aria-label="Início"
+            onclick="Huddle.Reunioes.renderHome()"
+          >
+            🏠
+          </button>
+
+          <button
+            class="btn-icone-config"
+            title="Configurações"
+            aria-label="Configurações"
+            onclick="Huddle.Configuracoes.renderHome()"
+          >
+            ⚙
+          </button>
+
+          <div class="header-logos">
+            <!-- Para ocultar a marca no cabeçalho, apague a linha abaixo. -->
+            <img src="images/Logo_HuddleFlow.svg" alt="Logo HuddleFlow">
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="app"></section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="data/seed.js"></script>
+  <script src="js/perguntas.js"></script>
+  <script src="js/pendencias.js"></script>
+  <script src="js/configuracoes.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/reunioes.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
