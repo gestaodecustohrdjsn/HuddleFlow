@@ -54,9 +54,9 @@ body {
 .header-titulo h1 {
   margin: 0;
   color: var(--turquesa);
-  font-size: 2.4rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-size: 2.8rem;
+  font-weight: 1500;
+  letter-spacing: 0.05em;
 }
 
 .header-titulo p {
