@@ -697,15 +697,17 @@ Huddle.Configuracoes = {
     leitor.onload = async () => {
       try {
         const backup = JSON.parse(leitor.result);
-        await Huddle.DB.importarBackup(backup);
+        const resultado = await Huddle.DB.importarBackup(backup);
+        const resumo = resultado?.resumo || {};
+
         await Huddle.DB.addLog({
           tipo: "backup",
           acao: "Backup importado",
-          detalhe: arquivo.name,
+          detalhe: `${arquivo.name} | Reuniões: ${resumo.reunioes || 0}; Respostas: ${resumo.respostas || 0}; Pendências: ${resumo.pendencias || 0}.`,
           usuario: "Configuração"
         });
 
-        Huddle.Utils.toast("Backup importado com sucesso.");
+        Huddle.Utils.toast(`Backup importado: ${resumo.reunioes || 0} reunião(ões), ${resumo.respostas || 0} resposta(s), ${resumo.pendencias || 0} pendência(s).`, 5200);
         await Huddle.Reunioes.renderHome();
       } catch (erro) {
         console.error(erro);

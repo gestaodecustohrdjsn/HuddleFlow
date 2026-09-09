@@ -259,7 +259,17 @@ Huddle.Dashboard = {
     const respostasPeriodo = respostas.filter(item => idsReunioes.has(item.id_reuniao));
 
     const pendenciasPeriodo = pendencias
-      .filter(item => idsReunioes.has(item.id_reuniao_origem))
+      .filter(item => {
+        const idOrigem = this.idReuniaoOrigemPendencia(item);
+
+        if (idOrigem && idsReunioes.has(idOrigem)) return true;
+
+        // Fallback para backups antigos/incompletos: se a pendência não tiver
+        // vínculo de reunião, usa a própria data de criação/abertura.
+        if (!idOrigem) return this.registroDentroDoIntervalo(item, intervalo);
+
+        return false;
+      })
       .filter(item => item.removida !== true && item.status !== "Removida");
 
     return {
@@ -374,6 +384,10 @@ Huddle.Dashboard = {
     return true;
   },
 
+  idReuniaoOrigemPendencia(pendencia) {
+    return pendencia?.id_reuniao_origem || pendencia?.id_reuniao || pendencia?.id_sessao || "";
+  },
+
   dataDoRegistro(registro) {
     const dataDaReuniao = this.dataBRParaDate(registro.data);
 
@@ -452,7 +466,7 @@ Huddle.Dashboard = {
     const mapaPerguntas = new Map(dados.perguntas.map(pergunta => [pergunta.id, pergunta]));
 
     const pendenciasPorPerguntaResposta = new Set(
-      dados.pendencias.map(p => `${p.id_reuniao_origem}|${p.id_setor}|${p.id_pergunta}`)
+      dados.pendencias.map(p => `${this.idReuniaoOrigemPendencia(p)}|${p.id_setor}|${p.id_pergunta}`)
     );
 
     const respostasNaoConformes = dados.respostas.filter(resposta =>
@@ -543,7 +557,7 @@ Huddle.Dashboard = {
       const respostas = dados.respostas.filter(item => item.id_pergunta === idPergunta);
       const pendencias = dados.pendencias.filter(item => item.id_pergunta === idPergunta);
       const chavesComPendencia = new Set(
-        pendencias.map(item => `${item.id_reuniao_origem}|${item.id_setor}|${item.id_pergunta}`)
+        pendencias.map(item => `${this.idReuniaoOrigemPendencia(item)}|${item.id_setor}|${item.id_pergunta}`)
       );
       const respostasComPendencia = respostas.filter(resposta =>
         chavesComPendencia.has(`${resposta.id_reuniao}|${resposta.id_setor}|${resposta.id_pergunta}`)

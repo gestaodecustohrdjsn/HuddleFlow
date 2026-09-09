@@ -1,4 +1,4 @@
-const CACHE_NAME = "huddleflow-pwa-v5-dashboard-periodo";
+const CACHE_NAME = "huddleflow-pwa-v6-import-relatorios";
 
 const APP_ASSETS = [
   "./",

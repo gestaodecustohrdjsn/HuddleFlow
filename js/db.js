@@ -162,22 +162,115 @@ Huddle.DB = {
     }
 
     const stores = this.storesSistema();
+    const resumo = {};
 
     for (const store of stores) {
       await this.clear(store);
+      resumo[store] = 0;
     }
 
     for (const store of stores) {
       const registros = Array.isArray(backup.dados[store]) ? backup.dados[store] : [];
 
       for (const registro of registros) {
-        if (registro && registro.id) {
-          await this.put(store, registro);
+        const normalizado = this.normalizarRegistroImportado(store, registro);
+
+        if (normalizado) {
+          await this.put(store, normalizado);
+          resumo[store] += 1;
         }
       }
     }
 
-    return true;
+    return {
+      sucesso: true,
+      resumo
+    };
+  },
+
+  normalizarRegistroImportado(store, registro) {
+    if (!registro || typeof registro !== "object") return null;
+
+    const item = { ...registro };
+
+    const idsAlternativos = {
+      meta: ["id"],
+      setores: ["id", "id_setor"],
+      perguntas: ["id", "id_pergunta"],
+      opcoes_pergunta: ["id", "id_opcao", "id_opcao_pergunta"],
+      reunioes: ["id", "id_reuniao", "id_sessao"],
+      reuniao_setores: ["id", "id_reuniao_setor", "id_presenca"],
+      respostas: ["id", "id_resposta"],
+      pendencias: ["id", "id_pendencia"],
+      pendencia_logs: ["id", "id_log", "id_historico"],
+      logs: ["id", "id_log"]
+    };
+
+    const alternativas = idsAlternativos[store] || ["id"];
+
+    if (!item.id) {
+      const campoId = alternativas.find(campo => item[campo]);
+      if (campoId) item.id = item[campoId];
+    }
+
+    if (!item.id) return null;
+
+    if (store === "pendencias") {
+      if (!item.id_reuniao_origem && item.id_reuniao) {
+        item.id_reuniao_origem = item.id_reuniao;
+      }
+
+      if (!item.status) {
+        item.status = item.resolvida ? "Resolvida" : "Aberta";
+      }
+
+      if (item.removida === undefined) {
+        item.removida = item.status === "Removida";
+      }
+
+      if (!item.created_at && item.data_abertura) {
+        item.created_at = this.dataHoraBackupParaISO(item.data_abertura, item.hora_abertura);
+      }
+
+      if (!item.updated_at) {
+        item.updated_at = item.created_at || Huddle.Utils.agoraISO();
+      }
+    }
+
+    if (store === "respostas") {
+      if (!item.created_at) item.created_at = Huddle.Utils.agoraISO();
+      if (!item.updated_at) item.updated_at = item.created_at;
+    }
+
+    if (store === "reunioes") {
+      if (!item.created_at && item.data) {
+        item.created_at = this.dataHoraBackupParaISO(item.data, item.hora_inicio);
+      }
+
+      if (!item.updated_at) {
+        item.updated_at = item.created_at || Huddle.Utils.agoraISO();
+      }
+    }
+
+    return item;
+  },
+
+  dataHoraBackupParaISO(dataBR, horaBR = "") {
+    if (!dataBR || typeof dataBR !== "string") return Huddle.Utils.agoraISO();
+
+    const partes = dataBR.split("/").map(Number);
+    if (partes.length !== 3) return Huddle.Utils.agoraISO();
+
+    const [dia, mes, ano] = partes;
+    const partesHora = String(horaBR || "00:00").split(":").map(Number);
+    const hora = partesHora[0] || 0;
+    const minuto = partesHora[1] || 0;
+
+    const data = new Date(ano, mes - 1, dia, hora, minuto, 0, 0);
+
+    if (Number.isNaN(data.getTime())) return Huddle.Utils.agoraISO();
+
+    return data.toISOString();
   },
 
   async addLog({ id_reuniao = "", tipo = "", acao = "", detalhe = "", usuario = "" }) {
