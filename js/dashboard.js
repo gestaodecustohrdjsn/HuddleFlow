@@ -2,9 +2,13 @@ window.Huddle = window.Huddle || {};
 
 Huddle.Dashboard = {
   periodoAtual: "TODOS",
+  dataInicioPersonalizada: "",
+  dataFimPersonalizada: "",
 
   async render(periodo = this.periodoAtual || "TODOS") {
     this.periodoAtual = periodo;
+
+    this.garantirDatasPersonalizadas();
 
     const dados = await this.carregarDados(periodo);
     const metricas = this.calcularMetricas(dados);
@@ -19,17 +23,23 @@ Huddle.Dashboard = {
           <div>
             <span class="dashboard-eyebrow">Indicadores locais</span>
             <h2>Dashboard</h2>
+            <p class="dashboard-periodo-resumo">${Huddle.Utils.escapeHtml(dados.rotuloPeriodo)}</p>
           </div>
 
           <div class="dashboard-filtros">
             <label for="dashboard_periodo">Período</label>
-            <select id="dashboard_periodo" onchange="Huddle.Dashboard.render(this.value)">
+            <select id="dashboard_periodo" onchange="Huddle.Dashboard.alterarPeriodo(this.value)">
               ${this.optionPeriodo("TODOS", "Todos os registros")}
               ${this.optionPeriodo("HOJE", "Hoje")}
+              ${this.optionPeriodo("MES_ATUAL", "Mês atual")}
+              ${this.optionPeriodo("MES_ANTERIOR", "Mês anterior")}
               ${this.optionPeriodo("7", "Últimos 7 dias")}
               ${this.optionPeriodo("30", "Últimos 30 dias")}
               ${this.optionPeriodo("90", "Últimos 90 dias")}
+              ${this.optionPeriodo("PERSONALIZADO", "Personalizado")}
             </select>
+
+            ${this.htmlPeriodoPersonalizado()}
           </div>
         </section>
 
@@ -153,6 +163,69 @@ Huddle.Dashboard = {
     return `<option value="${valor}" ${this.periodoAtual === valor ? "selected" : ""}>${texto}</option>`;
   },
 
+  alterarPeriodo(periodo) {
+    this.periodoAtual = periodo;
+    this.render(periodo);
+  },
+
+  garantirDatasPersonalizadas() {
+    if (this.dataInicioPersonalizada && this.dataFimPersonalizada) return;
+
+    const intervalo = this.intervaloMesAtual();
+
+    this.dataInicioPersonalizada = this.formatarDataInput(intervalo.inicio);
+    this.dataFimPersonalizada = this.formatarDataInput(intervalo.fim);
+  },
+
+  htmlPeriodoPersonalizado() {
+    if (this.periodoAtual !== "PERSONALIZADO") return "";
+
+    return `
+      <div class="dashboard-filtros-personalizado">
+        <div class="dashboard-filtro-data">
+          <label for="dashboard_data_inicio">Início</label>
+          <input
+            id="dashboard_data_inicio"
+            type="date"
+            value="${Huddle.Utils.escapeHtml(this.dataInicioPersonalizada)}"
+          >
+        </div>
+
+        <div class="dashboard-filtro-data">
+          <label for="dashboard_data_fim">Fim</label>
+          <input
+            id="dashboard_data_fim"
+            type="date"
+            value="${Huddle.Utils.escapeHtml(this.dataFimPersonalizada)}"
+          >
+        </div>
+
+        <button class="btn-principal btn-aplicar-periodo" onclick="Huddle.Dashboard.aplicarPeriodoPersonalizado()">
+          Aplicar
+        </button>
+      </div>
+    `;
+  },
+
+  aplicarPeriodoPersonalizado() {
+    const inicio = Huddle.Utils.$("dashboard_data_inicio")?.value || "";
+    const fim = Huddle.Utils.$("dashboard_data_fim")?.value || "";
+
+    if (!inicio || !fim) {
+      Huddle.Utils.toast("Informe a data inicial e a data final.");
+      return;
+    }
+
+    if (inicio > fim) {
+      Huddle.Utils.toast("A data inicial não pode ser maior que a data final.");
+      return;
+    }
+
+    this.dataInicioPersonalizada = inicio;
+    this.dataFimPersonalizada = fim;
+    this.render("PERSONALIZADO");
+  },
+
   async obterMetaConformidade() {
     const registro = await Huddle.DB.get("meta", "config_meta_conformidade");
     const valor = Number(registro?.valor);
@@ -174,11 +247,11 @@ Huddle.Dashboard = {
       Huddle.DB.getAll("pendencias")
     ]);
 
-    const inicio = this.obterInicioPeriodo(periodo);
+    const intervalo = this.obterIntervaloPeriodo(periodo);
 
     const reunioesConcluidas = reunioes
       .filter(reuniao => reuniao.status === "Concluída")
-      .filter(reuniao => !inicio || this.dataDoRegistro(reuniao) >= inicio);
+      .filter(reuniao => this.registroDentroDoIntervalo(reuniao, intervalo));
 
     const idsReunioes = new Set(reunioesConcluidas.map(reuniao => reuniao.id));
 
@@ -191,6 +264,7 @@ Huddle.Dashboard = {
 
     return {
       periodo,
+      rotuloPeriodo: intervalo.rotulo,
       reunioesTodas: reunioes,
       reunioes: reunioesConcluidas,
       relacoes: relacoesPeriodo,
@@ -201,31 +275,176 @@ Huddle.Dashboard = {
     };
   },
 
-  obterInicioPeriodo(periodo) {
-    if (!periodo || periodo === "TODOS") return null;
-
+  obterIntervaloPeriodo(periodo) {
     const agora = new Date();
 
+    if (!periodo || periodo === "TODOS") {
+      return {
+        inicio: null,
+        fim: null,
+        rotulo: "Todos os registros concluídos"
+      };
+    }
+
     if (periodo === "HOJE") {
-      const hoje = new Date(agora);
-      hoje.setHours(0, 0, 0, 0);
-      return hoje;
+      const inicio = new Date(agora);
+      inicio.setHours(0, 0, 0, 0);
+
+      const fim = new Date(agora);
+      fim.setHours(23, 59, 59, 999);
+
+      return {
+        inicio,
+        fim,
+        rotulo: `Hoje (${this.formatarDataBR(inicio)})`
+      };
+    }
+
+    if (periodo === "MES_ATUAL") {
+      const intervalo = this.intervaloMesAtual();
+      intervalo.rotulo = `Mês atual: ${this.formatarDataBR(intervalo.inicio)} a ${this.formatarDataBR(intervalo.fim)}`;
+      return intervalo;
+    }
+
+    if (periodo === "MES_ANTERIOR") {
+      const intervalo = this.intervaloMesAnterior();
+      intervalo.rotulo = `Mês anterior: ${this.formatarDataBR(intervalo.inicio)} a ${this.formatarDataBR(intervalo.fim)}`;
+      return intervalo;
+    }
+
+    if (periodo === "PERSONALIZADO") {
+      const inicio = this.dataInputParaInicioDia(this.dataInicioPersonalizada);
+      const fim = this.dataInputParaFimDia(this.dataFimPersonalizada);
+
+      return {
+        inicio,
+        fim,
+        rotulo: `Período personalizado: ${this.formatarDataBR(inicio)} a ${this.formatarDataBR(fim)}`
+      };
     }
 
     const dias = Number(periodo);
 
-    if (!dias) return null;
+    if (!dias) {
+      return {
+        inicio: null,
+        fim: null,
+        rotulo: "Todos os registros concluídos"
+      };
+    }
 
-    return new Date(agora.getTime() - dias * 24 * 60 * 60 * 1000);
+    const inicio = new Date(agora);
+    inicio.setHours(0, 0, 0, 0);
+    inicio.setDate(inicio.getDate() - (dias - 1));
+
+    const fim = new Date(agora);
+    fim.setHours(23, 59, 59, 999);
+
+    return {
+      inicio,
+      fim,
+      rotulo: `Últimos ${dias} dias: ${this.formatarDataBR(inicio)} a ${this.formatarDataBR(fim)}`
+    };
+  },
+
+  intervaloMesAtual() {
+    const agora = new Date();
+    const inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const fim = new Date(agora.getFullYear(), agora.getMonth() + 1, 0);
+    fim.setHours(23, 59, 59, 999);
+
+    return { inicio, fim, rotulo: "" };
+  },
+
+  intervaloMesAnterior() {
+    const agora = new Date();
+    const inicio = new Date(agora.getFullYear(), agora.getMonth() - 1, 1);
+    const fim = new Date(agora.getFullYear(), agora.getMonth(), 0);
+    fim.setHours(23, 59, 59, 999);
+
+    return { inicio, fim, rotulo: "" };
+  },
+
+  registroDentroDoIntervalo(registro, intervalo) {
+    const data = this.dataDoRegistro(registro);
+
+    if (intervalo.inicio && data < intervalo.inicio) return false;
+    if (intervalo.fim && data > intervalo.fim) return false;
+
+    return true;
   },
 
   dataDoRegistro(registro) {
-    const valor = registro.updated_at || registro.created_at || registro.resolved_at || "";
+    const dataDaReuniao = this.dataBRParaDate(registro.data);
+
+    if (dataDaReuniao) return dataDaReuniao;
+
+    const valor = registro.created_at || registro.updated_at || registro.resolved_at || "";
     const data = valor ? new Date(valor) : new Date(0);
 
     if (Number.isNaN(data.getTime())) return new Date(0);
 
     return data;
+  },
+
+  dataBRParaDate(valor) {
+    if (!valor || typeof valor !== "string") return null;
+
+    const partes = valor.split("/");
+
+    if (partes.length !== 3) return null;
+
+    const dia = Number(partes[0]);
+    const mes = Number(partes[1]);
+    const ano = Number(partes[2]);
+
+    if (!dia || !mes || !ano) return null;
+
+    const data = new Date(ano, mes - 1, dia);
+    data.setHours(12, 0, 0, 0);
+
+    if (Number.isNaN(data.getTime())) return null;
+
+    return data;
+  },
+
+  dataInputParaInicioDia(valor) {
+    const data = this.dataInputParaDate(valor);
+    data.setHours(0, 0, 0, 0);
+    return data;
+  },
+
+  dataInputParaFimDia(valor) {
+    const data = this.dataInputParaDate(valor);
+    data.setHours(23, 59, 59, 999);
+    return data;
+  },
+
+  dataInputParaDate(valor) {
+    const [ano, mes, dia] = String(valor || "").split("-").map(Number);
+    const data = new Date(ano, mes - 1, dia);
+
+    if (Number.isNaN(data.getTime())) {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      return hoje;
+    }
+
+    return data;
+  },
+
+  formatarDataInput(data) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}`;
+  },
+
+  formatarDataBR(data) {
+    if (!data || Number.isNaN(data.getTime())) return "";
+
+    return new Intl.DateTimeFormat("pt-BR").format(data);
   },
 
   calcularMetricas(dados) {

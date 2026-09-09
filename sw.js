@@ -1,4 +1,4 @@
-const CACHE_NAME = "huddleflow-pwa-v4-icones-prazo";
+const CACHE_NAME = "huddleflow-pwa-v5-dashboard-periodo";
 
 const APP_ASSETS = [
   "./",
